@@ -1,0 +1,206 @@
+-- INÍCIO DO SCRIPT
+-- Deobfuscated By jerryroblox (discord)
+
+-- ========================= UTILIDADES DE OBSCURAÇÃO ==========================
+local function isfolder() return false end
+local function makefolder() end
+local function writefile() end
+local function readfile() return nil end
+
+local game      = game
+local workspace = workspace
+local Players   = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+
+-- ========================= CONFIGURAÇÕES =====================================
+local TARGET_NAME          = "Ball"          -- Nome do objeto que será clicado
+local CPS                   = 1000           -- Clicks por segundo desejados
+local CLICK_INTERVAL        = 1 / CPS        -- Intervalo em segundos
+local MAX_CLICKS            = 0              -- 0 = ilimitado
+
+-- ========================= FUNÇÕES AUXILIARES =================================
+local function newInstance(className, props, parent)
+    local inst = Instance.new(className)
+    for k, v in pairs(props or {}) do
+        inst[k] = v
+    end
+    if parent then inst.Parent = parent end
+    return inst
+end
+
+local function createUI(class, props, parent)
+    return newInstance(class, props, parent)
+end
+
+-- ========================= NOTIFICAÇÕES =======================================
+local function sendNotification(title, text, iconUrl, duration)
+    duration = duration or 4
+    local screenGui = createUI("ScreenGui", {ResetOnSpawn = false, IgnoreGuiInset = true}, game.CoreGui)
+    local frame     = createUI("Frame", {
+        Size = UDim2.new(1, 0, 0, 70),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, screenGui)
+
+    -- Fundo escuro
+    createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(16, 16, 26),
+        BorderSizePixel = 0,
+    }, frame)
+
+    -- Barra de cor de destaque
+    createUI("Frame", {
+        Size = UDim2.new(1, 0, 0, 5),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(99, 102, 241),
+    }, frame)
+
+    -- Ícone
+    createUI("ImageLabel", {
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(0, 8, 0, 8),
+        BackgroundTransparency = 1,
+        Image = iconUrl,
+        ImageColor3 = Color3.fromRGB(99, 102, 241),
+    }, frame)
+
+    -- Título
+    createUI("TextLabel", {
+        Text = title or "Notificação",
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(235, 235, 245),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 40, 0, 8),
+        Size = UDim2.new(1, -48, 0, 20),
+        Font = Enum.Font.GothamBold,
+    }, frame)
+
+    -- Texto
+    createUI("TextLabel", {
+        Text = text or "",
+        TextSize = 11,
+        TextColor3 = Color3.fromRGB(148, 152, 185),
+        TextWrapped = true,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 40, 0, 36),
+        Size = UDim2.new(1, -48, 0, 40),
+        Font = Enum.Font.Gotham,
+    }, frame)
+
+    -- Entrada
+    frame.Position = UDim2.new(-1.08, 0, 0, 0)
+    local tweenIn = TweenService:Create(frame, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)})
+    tweenIn:Play()
+
+    -- Saída
+    task.delay(duration, function()
+        local tweenOut = TweenService:Create(frame, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.In), {Position = UDim2.new(-1.08, 0, 0, 0)})
+        tweenOut:Play()
+        task.delay(0.4, function() screenGui:Destroy() end)
+    end)
+end
+
+-- ========================= CRIAÇÃO DA TELA ================================
+local function createMainScreen()
+    local screenGui = createUI("ScreenGui", {
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, game.CoreGui)
+
+    -- Container principal
+    local container = createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+    }, screenGui)
+
+    -- Fundo (imagem opcional)
+    createUI("ImageLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Image = "http://www.roblox.com/asset/?id=1381865715", -- Substitua se quiser outra
+        ImageColor3 = Color3.fromRGB(255, 255, 255),
+        ScaleType = Enum.ImageScaleType.Fit,
+    }, container)
+
+    -- Overlay escuro
+    createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+    }, container)
+
+    -- Botão de Auto‑Click
+    local autoClickBtn = createUI("TextButton", {
+        Text = "Auto Click OFF",
+        Size = UDim2.new(0, 140, 0, 40),
+        Position = UDim2.new(0.5, -70, 0.7, -20),
+        BackgroundColor3 = Color3.fromRGB(99, 102, 241),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+    }, container)
+
+    return screenGui, autoClickBtn
+end
+
+-- ========================= EXECUÇÃO PRINCIPAL =========================
+local mainScreen, autoClickBtn = createMainScreen()
+
+local autoClickActive = false
+local clickTask
+
+-- Função que tenta clicar no objeto alvo
+local function tryClick()
+    local target = workspace:FindFirstChild(TARGET_NAME)
+    if target then
+        local clickEvent = target:FindFirstChild("Click")
+        if clickEvent and clickEvent:IsA("RemoteEvent") then
+            clickEvent:FireServer()
+        end
+    end
+end
+
+-- Função de controle do loop de auto‑click
+local function toggleAutoClick()
+    autoClickActive = not autoClickActive
+    if autoClickActive then
+        autoClickBtn.Text = "Auto Click ON"
+        autoClickBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        -- Se já houver um loop em execução, não cria outro
+        if not clickTask then
+            clickTask = task.spawn(function()
+                while autoClickActive do
+                    tryClick()
+                    if MAX_CLICKS > 0 then
+                        MAX_CLICKS = MAX_CLICKS - 1
+                        if MAX_CLICKS == 0 then
+                            autoClickActive = false
+                            autoClickBtn.Text = "Auto Click OFF"
+                            autoClickBtn.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
+                            break
+                        end
+                    end
+                    task.wait(CLICK_INTERVAL)
+                end
+                clickTask = nil
+            end)
+        end
+    else
+        autoClickBtn.Text = "Auto Click OFF"
+        autoClickBtn.BackgroundColor3 = Color3.fromRGB(99, 102, 241)
+    end
+end
+
+autoClickBtn.MouseButton1Click:Connect(toggleAutoClick)
+
+-- Mensagem de inicialização
+sendNotification("Auto Click", "Clique no botão para ligar/desligar.", "", 4)
+
+-- FIM DO SCRIPT
