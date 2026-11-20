@@ -1,0 +1,183 @@
+-- INÍCIO DO SCRIPT
+-- Deobfuscated By jerryroblox (discord)
+
+-- ==== UTILIDADES DE OBSCURAÇÃO ==================================================
+local function isfolder() return false end
+local function makefolder() end
+local function writefile() end
+local function readfile() return nil end
+
+local game   = game
+local workspace = workspace
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService    = game:GetService("RunService")
+
+-- ==== CONFIGURAÇÕES ============================================================
+local TARGET = workspace:WaitForChild("Ball") -- Mude para o nome do seu balde
+local AUTO_CLICK_DURATION = 0.01 -- Em segundos
+local CPS = 1000
+local MAX_CLICKS = 0
+
+-- ==== FUNÇÕES AUXILIARES =======================================================
+local function newInstance(className, props, parent)
+    local inst = Instance.new(className)
+    for k, v in pairs(props or {}) do
+        inst[k] = v
+    end
+    if parent then parent:addChild(inst) end
+    return inst
+end
+
+local function createUI(class, props, parent)
+    return newInstance(class, props, parent)
+end
+
+-- ==== GERENCIAMENTO DE NOTIFICAÇÕES ==========================================
+local function sendNotification(title, text, iconUrl, duration)
+    local screenGui = createUI("ScreenGui", {ResetOnSpawn = false, IgnoreGuiInset = true}, game.CoreGui)
+    local frame     = createUI("Frame", {
+        Size = UDim2.new(1, 0, 0, 70),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, screenGui)
+
+    -- Fundo escuro
+    createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(16, 16, 26),
+        BorderSizePixel = 0,
+    }, frame)
+
+    -- Barra de cor de destaque
+    local accentBar = createUI("Frame", {
+        Size = UDim2.new(1, 0, 0, 5),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(99, 102, 241),
+    }, frame)
+
+    -- Ícone da notificação
+    createUI("ImageLabel", {
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(0, 8, 0, 8),
+        BackgroundTransparency = 1,
+        Image = iconUrl,
+        ImageColor3 = Color3.fromRGB(99, 102, 241),
+    }, frame)
+
+    -- Título
+    createUI("TextLabel", {
+        Text = title or "Notificação",
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(235, 235, 245),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 40, 0, 8),
+        Size = UDim2.new(1, -48, 0, 20),
+        Font = Enum.Font.GothamSSmBold,
+    }, frame)
+
+    -- Texto
+    createUI("TextLabel", {
+        Text = text or "",
+        TextSize = 11,
+        TextColor3 = Color3.fromRGB(148, 152, 185),
+        TextWrapped = true,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 40, 0, 36),
+        Size = UDim2.new(1, -48, 0, 40),
+        Font = Enum.Font.GothamSSm,
+    }, frame)
+
+    -- Efeito de entrada
+    frame.Position = UDim2.new(-1.08, 0, 0, 0)
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+    local tween = TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, 0, 0, 0)})
+    tween:Play()
+
+    -- Timeout
+    task.delay(4, function()
+        tween = TweenService:Create(frame, tweenInfo, {Position = UDim2.new(-1.08, 0, 0, 0)})
+        tween:Play()
+        task.delay(0.4, function() screenGui:Destroy() end)
+    end)
+end
+
+-- ==== CRIAÇÃO DA TELA PRINCIPAL (BACKGROUND COM IMAGEM) ======================
+local function createMainScreen()
+    local screenGui = createUI("ScreenGui", {
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    }, game.CoreGui)
+
+    -- Container principal (centralizado)
+    local container = createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+    }, screenGui)
+
+    -- Fundo com a foto da mulher
+    createUI("ImageLabel", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Image = "http://www.roblox.com/asset/?id=1381865715",
+        ImageColor3 = Color3.fromRGB(255, 255, 255),
+        ScaleType = Enum.ImageScaleType.Fit,
+    }, container)
+
+    -- Overlay escuro para melhorar a legibilidade
+    createUI("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+    }, container)
+
+    -- Exemplo de botão flutuante (pode ser removido ou customizado)
+    local btn = createUI("TextButton", {
+        Text = "Clique aqui",
+        Size = UDim2.new(0, 120, 0, 40),
+        Position = UDim2.new(0.5, -60, 0.9, -20),
+        BackgroundColor3 = Color3.fromRGB(99, 102, 241),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamSSmBold,
+        TextSize = 13,
+    }, container)
+
+    -- Botão de auto click
+    local autoClickBtn = createUI("TextButton", {
+        Text = "Auto Click",
+        Size = UDim2.new(0, 120, 0, 40),
+        Position = UDim2.new(0.5, -60, 0.7, -20),
+        BackgroundColor3 = Color3.fromRGB(99, 102, 241),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamSSmBold,
+        TextSize = 13,
+    }, container)
+
+    return screenGui
+end
+
+-- ==== EXIBIÇÃO DA TELA ========================================================
+local mainScreen = createMainScreen()
+
+-- ==== GERENCIAMENTO DE AUTO CLICK ==============================================
+local function click()
+    local part = TARGET
+    part:FindFirstChild("Click"):FireServer()
+end
+
+local autoClick = false
+
+autoClickBtn.MouseButton1Click:Connect(function()
+    autoClick = true
+    while autoClick do
+        click()
+        wait(AUTO_CLICK_DURATION)
+        if MAX_CLICKS < MAX_CLICKS then MAX_CLICKS = MAX_CLICKS end
+    end
+end)
+
+-- ==== FIM DO SCRIPT ==========================================================
